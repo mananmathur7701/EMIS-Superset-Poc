@@ -1,0 +1,37 @@
+# What git should never commit in this project.
+
+# Local settings and passwords (copy .env.example to .env and fill it in).
+.env
+.env.*
+!.env.example
+
+# Backend: Maven's build output.
+backend/target/
+
+# Frontend: installed packages, the production build and Vite's cache.
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Superset: the local Python environment (created by superset/local/setup.sh) and Python caches.
+superset/.venv/
+__pycache__/
+*.py[cod]
+
+# Log files written by the backend (logs/emis-backend.log, logs/users/<username>.log), wherever
+# the backend was started from, plus tool logs.
+logs/
+*.log
+npm-debug.log*
+
+# Editors and IDEs (IntelliJ run configurations, VS Code settings).
+.idea/
+.vscode/
+*.iml
+
+# Personal Claude Code settings (the shared .claude/settings.json may be committed).
+.claude/settings.local.json
+
+# Operating-system clutter.
+.DS_Store
+Thumbs.db

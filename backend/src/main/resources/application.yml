@@ -1,0 +1,98 @@
+# The port the backend listens on (Docker overrides it with SERVER_PORT=8080).
+server:
+  port: 8081
+  servlet:
+    session:
+      # Longest a login cookie can live. The real idle timeout is emis.session.idle-timeout below.
+      timeout: 8h
+      cookie:
+        # Only send the login cookie with requests from our own site.
+        same-site: lax
+
+spring:
+  # Name of the app, shown in logs.
+  application:
+    name: emis-analytics-api
+  # Also read settings from the project's .env file, which git ignores, so passwords never live in
+  # this file. IntelliJ starts in the project root (.env); mvn spring-boot:run starts in backend/
+  # (../.env). Environment variables still win over both.
+  config:
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
+  # How to connect to the EMIS Postgres database. The password comes from DB_PASSWORD in .env.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/emis_superset_app}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  # Run schema.sql and data.sql on every start (both are safe to re-run).
+  sql:
+    init:
+      mode: always
+  # Send errors to the frontend as JSON with a readable "detail" message.
+  mvc:
+    problemdetails:
+      enabled: true
+  # Give up on Superset calls that take too long.
+  http:
+    clients:
+      connect-timeout: 5s
+      read-timeout: 15s
+
+superset:
+  # Address the backend uses to call Superset (inside Docker: http://superset:8088).
+  base-url: ${SUPERSET_BASE_URL:http://localhost:8088}
+  # Address the browser uses for the builder (Explore) iframe.
+  public-url: ${SUPERSET_PUBLIC_URL:http://localhost:8088}
+  # Address the browser uses for the embedded dashboard. It must be a different hostname from
+  # public-url: Superset's embedded page logs the browser out of Superset on its own hostname,
+  # which would otherwise sign the analyst out of the builder. *.localhost points to this machine.
+  embed-url: ${SUPERSET_EMBED_URL:http://embed.localhost:8088}
+  # Superset account the backend logs in with to create guest tokens.
+  username: ${SUPERSET_USERNAME:admin}
+  password: ${SUPERSET_PASSWORD:admin}
+  # "db" means a normal Superset username/password account.
+  provider: ${SUPERSET_PROVIDER:db}
+  # Short name of the dashboard every role gets until the CPU analyst publishes others.
+  dashboard-slug: ${SUPERSET_DASHBOARD_SLUG:census-kpis}
+  # Frontend addresses allowed to embed a published dashboard (comma-separated).
+  embed-allowed-domains: ${EMBED_HOST_ORIGINS:http://localhost:3000}
+  # Secret shared with Superset (EMIS_SSO_SECRET there too) for the CPU analyst's automatic
+  # sign-in to the builder. Change it for anything beyond a laptop demo.
+  sso-secret: ${EMIS_SSO_SECRET:dev-only-sso-secret-change-me-0123456789}
+
+emis:
+  # Folder for the log files (emis-backend.log and users/<username>.log), relative to the folder
+  # the backend is started from (IntelliJ: the project root).
+  logging:
+    dir: ${LOG_DIR:logs}
+  # The academic year registrars report for now.
+  reporting-year: ${REPORTING_YEAR:2026/2027}
+  session:
+    # Log the user out after this long without activity. Background guest-token renewals do not
+    # count as activity, so an unattended screen still times out.
+    idle-timeout: ${SESSION_IDLE_TIMEOUT:30m}
+  # Show the "switch account" dropdown after login (demo only; turn off for real use).
+  demo-switch-enabled: ${DEMO_SWITCH_ENABLED:true}
+  # Frontend addresses that may call this API directly from the browser (comma-separated).
+  # The bundled frontend does not need this: it calls /api on its own address.
+  cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+# How much the backend logs (the outputs and line layout are in logback-spring.xml).
+logging:
+  level:
+    # Our code: DEBUG shows every step of every request (the call trace, helpers, SQL decisions).
+    com.emis.analytics: ${LOG_LEVEL:DEBUG}
+    # Spring's SQL script runner: shows schema.sql and data.sql running at start-up.
+    org.springframework.jdbc.datasource.init: DEBUG
+    # Everything else (Spring, Tomcat, the connection pool): normal messages only.
+    root: INFO
+
+# Expose a health URL (http://localhost:8081/actuator/health) to check the backend is up.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

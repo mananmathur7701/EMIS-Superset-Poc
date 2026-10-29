@@ -1,0 +1,1780 @@
+/* EMIS 2.0 design tokens (copied from the EMIS mockup's tokens.css), so this app looks the same. */
+:root {
+  /* Page, card and soft backgrounds. */
+  --bg-app: #F6F7F9;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F1F3F6;
+  /* Border colours. */
+  --border-default: #E3E6EB;
+  --border-strong: #CDD2DA;
+  /* Text colours. */
+  --text-primary: #1B2430;
+  --text-secondary: #526071;
+  --text-muted: #7B8794;
+  /* The EMIS blue, a darker shade, and two light tints. */
+  --primary-600: #1F5FBF;
+  --primary-700: color-mix(in srgb, #1F5FBF 82%, #000000);
+  --primary-50: color-mix(in srgb, #1F5FBF 8%, #FFFFFF);
+  --primary-100: color-mix(in srgb, #1F5FBF 18%, #FFFFFF);
+  /* Status colours (red for errors, blue for info, amber for warnings). */
+  --danger-text: #991B1B;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+  --info-text: #1E40AF;
+  --info-bg: #F0F9FF;
+  --info-border: #BAE6FD;
+  --warning-text: #92400E;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
+  /* Corner rounding for inputs/buttons, cards and chips. */
+  --radius-input: 6px;
+  --radius-card: 10px;
+  --radius-chip: 999px;
+  /* The one soft shadow used for floating menus. */
+  --shadow-menu: 0 8px 24px rgba(16, 24, 40, 0.08);
+}
+
+/* Bootstrap (used by the Form.io builder and forms) takes its colours, font and corners from these
+   variables, so Form.io looks like the rest of EMIS. */
+:root {
+  --bs-body-font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --bs-body-font-size: 14px;
+  --bs-body-color: #1B2430;
+  --bs-body-bg: #F6F7F9;
+  --bs-primary: #1F5FBF;
+  --bs-primary-rgb: 31, 95, 191;
+  --bs-link-color: #1F5FBF;
+  --bs-link-color-rgb: 31, 95, 191;
+  --bs-link-hover-color-rgb: 25, 78, 157;
+  --bs-border-color: #E3E6EB;
+  --bs-border-radius: 6px;
+  --bs-secondary-color: #7B8794;
+}
+
+/* Bootstrap's blue buttons (Form.io's "Save" in its edit dialog) in EMIS blue. */
+.btn-primary {
+  --bs-btn-bg: #1F5FBF;
+  --bs-btn-border-color: #1F5FBF;
+  --bs-btn-hover-bg: #194E9D;
+  --bs-btn-hover-border-color: #194E9D;
+  --bs-btn-active-bg: #194E9D;
+  --bs-btn-active-border-color: #194E9D;
+  --bs-btn-disabled-bg: #1F5FBF;
+  --bs-btn-disabled-border-color: #1F5FBF;
+}
+
+/* Bootstrap's focus glow on inputs, in EMIS blue. */
+.form-control:focus,
+.form-select:focus {
+  border-color: #1F5FBF;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #1F5FBF 20%, transparent);
+}
+
+/* Use the same box sizing everywhere, so padding never makes things wider. */
+* {
+  box-sizing: border-box;
+}
+
+/* Base look: EMIS font, 14px text, grey page background, smooth font edges. */
+html,
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* EMIS titles are semibold (600), never bold. */
+h1,
+strong {
+  font-weight: 600;
+}
+
+/* Buttons use the page font. */
+button,
+input {
+  font: inherit;
+}
+
+/* Keyboard focus: the EMIS blue ring. */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary-600) 40%, transparent);
+  outline-offset: 2px;
+}
+
+/* Main button: EMIS blue with white text. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-input);
+  background: var(--primary-600);
+  color: #FFFFFF;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Darker blue on hover. */
+.button:hover {
+  background: var(--primary-700);
+}
+
+/* Greyed out while waiting. */
+.button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ---------------------------------------------------------------- Loading cover */
+
+/* Covers a workspace with the spinner and message in the middle. */
+.loading-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* The error version of the cover: red text on a light red background. */
+.loading-cover.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* The spinner: a grey ring with a blue arc, the same as Superset's (see superset_config.py). */
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-default);
+  border-top-color: var(--primary-600);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* One full turn. */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------- Login page */
+
+/* The login page fills the window: top bar, then the centred card. */
+.login-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+}
+
+/* The slim white bar at the top of the login page. */
+.login-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 16px;
+}
+
+/* The grey country chip in the login top bar. */
+.login-country {
+  padding: 2px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-chip);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Centres the login card in the space below the top bar. */
+.login-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* The white login card. */
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+}
+
+/* The thin blue stripe on top of the card. */
+.login-stripe {
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary-600), #0284c7);
+}
+
+/* The card's content: one column. */
+.login-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 32px;
+}
+
+/* The blue shield tile above the title. */
+.login-icon {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--primary-600);
+  color: #FFFFFF;
+}
+
+/* The login title. */
+.login-body h1 {
+  margin: 0;
+  font-size: 24px;
+  text-align: center;
+}
+
+/* The line under the title. */
+.login-subtitle {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Field labels. */
+.login-body label {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* A text box with an icon inside on the left. */
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  color: var(--text-muted);
+}
+
+/* Blue border when the box is in use. */
+.input-with-icon:focus-within {
+  border-color: var(--primary-600);
+}
+
+/* The actual input: no border of its own, fills the box. */
+.input-with-icon input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+/* The sign-in button gets some space above it. */
+.login-body .button {
+  margin-top: 16px;
+}
+
+/* An info message such as "You have signed out". */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--info-border);
+  border-radius: 8px;
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+/* A login error such as "Wrong username or password." */
+.form-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: 8px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+/* The small hint under the button. */
+.hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- App shell */
+
+/* The whole window: top bar above, menu and page below; nothing scrolls the window itself. */
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* The 56px white top bar. */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  flex-shrink: 0;
+  padding: 0 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* The breadcrumb trail on the left of the top bar. */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* The current page in the breadcrumb trail. */
+.breadcrumbs strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* The "/" between breadcrumbs. */
+.breadcrumb-separator {
+  font-size: 12px;
+}
+
+/* The right-hand side of the top bar (kept on the right even when the breadcrumbs are hidden). */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* The amber "Sample data" badge. */
+.sample-badge {
+  padding: 2px 8px;
+  border: 1px solid #FCD34D;
+  border-radius: 4px;
+  background: #FEF3C7;
+  color: #78350F;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Below the top bar: the menu on the left, the page on the right. */
+.shell-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* ---------------------------------------------------------------- Side menu */
+
+/* The 248px white menu column. */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 248px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-default);
+}
+
+/* The brand row at the top of the menu. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* The blue square "EM" mark (also used on the login page). */
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: var(--primary-600);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Name and country, one above the other. */
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+/* "EMIS" in the brand row. */
+.brand-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* The small "2.0" chip. */
+.brand-version {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* "Saint Lucia" under the name. */
+.brand-country {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+/* The menu items take the space between brand and footer. */
+.side-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+}
+
+/* The small grey group heading. */
+.side-nav-group {
+  padding: 8px 8px 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* One menu item: icon and label in a 40px row. */
+.side-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Soft grey on hover. */
+.side-nav-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* The open page: light blue background and blue text. */
+.side-nav-item.active {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 600;
+}
+
+/* The open page also gets a 3px blue bar on its left edge. */
+.side-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--primary-600);
+}
+
+/* The bottom of the menu, with "Sign out". */
+.sidebar-footer {
+  padding: 8px 6px;
+  border-top: 1px solid var(--border-default);
+}
+
+/* ---------------------------------------------------------------- Role switcher */
+
+/* The switcher; its dropdown is placed against it. */
+.role-switcher {
+  position: relative;
+}
+
+/* The pill button: avatar, name/role, scope and arrow. */
+.role-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Light blue hover. */
+.role-pill:hover:not(:disabled) {
+  border-color: #60A5FA;
+  background: var(--primary-50);
+}
+
+/* Not clickable when switching is turned off. */
+.role-pill:disabled {
+  cursor: default;
+}
+
+/* A coloured square with initials or a number (background colour set per role). */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Name/role line above the scope line. */
+.role-pill-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+/* The name and role chip side by side. */
+.role-pill-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* The small blue role chip, e.g. "DEO". */
+.role-chip {
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--primary-100);
+  color: var(--primary-700);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* The scope line, e.g. "District D03". */
+.role-pill-scope {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* Scope icon colours: sky for national, purple for district, green for school. */
+.scope-icon.national {
+  color: #0284c7;
+}
+
+/* Purple district pin. */
+.scope-icon.district {
+  color: #7c3aed;
+}
+
+/* Green school building. */
+.scope-icon.school {
+  color: #059669;
+}
+
+/* The arrow, which flips while the list is open. */
+.chevron {
+  color: var(--text-muted);
+  transition: transform 150ms ease;
+}
+
+/* Flipped arrow. */
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* The floating list of demo accounts. */
+.role-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+  font-size: 12px;
+}
+
+/* The list heading: title and explanation. */
+.role-menu-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px 10px;
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* The heading title. */
+.role-menu-header strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* The amber sparkle icon. */
+.sparkle {
+  color: #F59E0B;
+}
+
+/* One account row. */
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Soft grey on hover. */
+.role-option:hover {
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
+}
+
+/* The logged-in account: light blue with a blue border. */
+.role-option.active {
+  border-color: #93C5FD;
+  background: var(--primary-50);
+}
+
+/* Name, role and scope, one under the other. */
+.role-option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The name with the "Active" badge pushed to the right. */
+.role-option-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-primary);
+}
+
+/* The scope line in a row. */
+.role-option-scope {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+/* The small blue "Active" badge. */
+.active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--primary-100);
+  color: var(--primary-700);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* The list footer. */
+.role-menu-footer {
+  margin-top: 6px;
+  padding: 8px 10px 2px;
+  border-top: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 10px;
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------- Page */
+
+/* The page area: header on top, the pages below, filling the rest of the window. */
+.page {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+/* The page header: title/description on the left, row filter on the right, line underneath. */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* The page title: 20px semibold. */
+.page-header h1 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+/* The page description: 13px muted. */
+.page-header p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* The row filter chip: soft blue. */
+.scope-chip {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-chip);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* The filter text inside the chip. */
+.scope-chip code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+/* The area holding the pages, stacked on top of each other. */
+.pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* One page fills the whole area. */
+.page-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+/* A page that is not open: invisible and not clickable, but still full size, so its iframe
+   keeps its layout and does not redraw (or show a loader) when the page is opened again. */
+.page-pane.is-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The builder sits in a white frame with a border, like other EMIS panels. ("card" is avoided:
+   Bootstrap, which Form.io needs, has its own .card.) */
+.page-pane.framed {
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+
+/* The box inside a page; the loading cover sits on top of it. */
+.workspace {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Both iframes (Explore and the dashboard) fill their box with no border. */
+.workspace iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* The div the SDK draws the dashboard into fills the box. */
+.dashboard-mount {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------- Shared page parts */
+
+/* A page that scrolls (lists and editors), instead of filling the area like a dashboard. */
+.page-pane.scroll {
+  display: block;
+  overflow-y: auto;
+}
+
+/* The content of a scrolling page: blocks one under the other. */
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+/* A row of controls: left part and right part. */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* The right part of a toolbar. */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* A white button with a grey border, for less important actions. */
+.button.secondary {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Soft grey on hover. */
+.button.secondary:hover {
+  background: var(--bg-subtle);
+}
+
+/* A smaller button, for table rows. */
+.button.small {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/* A square button holding only an icon (edit, close). */
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* Soft grey on hover. */
+.icon-button:hover {
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+/* A row of buttons. */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* A white box with a border, like EMIS cards. */
+.surface {
+  padding: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+
+/* Small headings inside panels. */
+.surface h3,
+.section-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* A heading between parts of a dialog or panel (wins over ".surface h3"). */
+.section-title,
+.surface .section-title {
+  margin-top: 20px;
+}
+
+/* Text inside panels: a little space below. */
+.surface p {
+  margin: 0 0 12px;
+}
+
+/* Grey secondary text. */
+.muted {
+  color: var(--text-muted);
+}
+
+/* Smaller text. */
+.small {
+  font-size: 12px;
+}
+
+/* Code-like text (formulas). */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* An info message in green, after a successful save. */
+.notice.success {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+  color: #166534;
+}
+
+/* A warning message in amber, e.g. why a return was sent back. */
+.notice.warning {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+/* A grey message in the middle of an empty page or list. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Paragraphs in the empty state. */
+.empty-state p {
+  margin: 0;
+}
+
+/* Tabs drawn as one rounded group of buttons. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  padding: 3px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+
+/* One tab. */
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* The chosen tab: white. */
+.segmented button.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+/* A count inside a tab. */
+.count {
+  padding: 0 6px;
+  border-radius: var(--radius-chip);
+  background: var(--primary-100);
+  color: var(--primary-700);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- Tables and badges */
+
+/* A table panel has no padding (the table has its own) and scrolls sideways if needed. */
+.table-panel {
+  padding: 0;
+  overflow-x: auto;
+}
+
+/* The EMIS table. */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Header cells: small grey capitals on a soft background. */
+.data-table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Body cells. */
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: middle;
+}
+
+/* No line under the last row. */
+.data-table tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Centred cells (checkbox columns). */
+.data-table .center {
+  text-align: center;
+}
+
+/* Rows that open something when clicked. */
+.data-table tr.clickable {
+  cursor: pointer;
+}
+
+/* Soft highlight on hover. */
+.data-table tr.clickable:hover td {
+  background: var(--primary-50);
+}
+
+/* The last cell with the row's button, on the right. */
+.row-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The blue "Review" pill. */
+.pill-action {
+  padding: 2px 10px;
+  border-radius: var(--radius-chip);
+  background: var(--primary-600);
+  color: #FFFFFF;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* A code such as KPI-TCH-01 or total_pupils. */
+.code-chip {
+  display: inline-block;
+  margin: 1px 4px 1px 0;
+  padding: 1px 6px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+/* A status pill; the colour depends on the status. */
+.status-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-chip);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Waiting for someone: amber. */
+.status-with_principal,
+.status-with_deo,
+.status-with_cpu {
+  border-color: var(--warning-border);
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+/* Final or in use: green. */
+.status-frozen,
+.status-active,
+.status-published {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+  color: #166534;
+}
+
+/* Being filled in: blue. */
+.status-draft {
+  border-color: var(--info-border);
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+/* ---------------------------------------------------------------- Dialogs and forms */
+
+/* The dark cover behind a dialog. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  overflow-y: auto;
+  background: rgba(16, 24, 40, 0.45);
+}
+
+/* The dialog: a white box. */
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+}
+
+/* A wider dialog for bigger editors. */
+.dialog.wide {
+  max-width: 900px;
+}
+
+/* The title bar. */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* The title. */
+.dialog-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* The content. */
+.dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+/* Paragraphs in the content. */
+.dialog-body p {
+  margin: 0;
+}
+
+/* The buttons, on the right. */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-default);
+}
+
+/* Inputs laid out in two columns. */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+/* Three columns. */
+.form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Four columns. */
+.form-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 4px;
+}
+
+/* An input that takes two columns. */
+.span-2 {
+  grid-column: span 2;
+}
+
+/* An input that takes four columns. */
+.span-4 {
+  grid-column: span 4;
+}
+
+/* A label with its input underneath. */
+.input-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* A text box, list or text area. */
+.text-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-input);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+/* Blue border while typing. */
+.text-input:focus {
+  border-color: var(--primary-600);
+  outline: 2px solid color-mix(in srgb, var(--primary-600) 20%, transparent);
+}
+
+/* Greyed out when it cannot be changed. */
+.text-input:disabled {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+/* A checkbox with its label. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* A box of checkboxes with a heading. */
+.check-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+}
+
+/* The box's heading. */
+.check-group legend {
+  float: none;
+  width: auto;
+  margin: 0;
+  padding: 0 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* A long list of checkboxes scrolls. */
+.check-group.scroll {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* The formula under the KPI calculation inputs. */
+.formula-preview {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+}
+
+/* The KPI checkboxes of a form. */
+.kpi-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin-bottom: 12px;
+}
+
+/* ---------------------------------------------------------------- Registrar forms */
+
+/* Cards in a grid. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* One form card (a button). */
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Blue border on hover. */
+.tile:hover {
+  border-color: var(--primary-600);
+}
+
+/* Title and status on one line. */
+.tile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* The amber "sent back" line. */
+.tile-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warning-text);
+  font-size: 12px;
+}
+
+/* "Start →" at the bottom. */
+.tile-action {
+  margin-top: 4px;
+  color: var(--primary-600);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- One return */
+
+/* The return screen. */
+.return-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+/* Back button, title and status in one row. */
+.return-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* The title takes the free space. */
+.return-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The form name. */
+.return-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* The form on the left, the side column on the right. */
+.return-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+  gap: 16px;
+}
+
+/* The side column: panels one under the other. */
+.return-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* The review flow: numbered steps joined by a line. */
+.tracker {
+  display: flex;
+  margin: 0;
+  padding: 12px 16px;
+  list-style: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+
+/* One step. */
+.tracker li {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* The line from one step to the next. */
+.tracker li + li::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--border-default);
+}
+
+/* The step's circle. */
+.tracker-dot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg-surface);
+  font-weight: 600;
+}
+
+/* Finished steps: green. */
+.tracker li.done {
+  color: #166534;
+}
+
+/* A finished step's circle and line. */
+.tracker li.done .tracker-dot {
+  border-color: #16A34A;
+  background: #16A34A;
+  color: #FFFFFF;
+}
+
+/* The line into a finished step. */
+.tracker li.done::before {
+  background: #16A34A;
+}
+
+/* The current step: blue. */
+.tracker li.active {
+  color: var(--primary-700);
+  font-weight: 600;
+}
+
+/* The current step's circle. */
+.tracker li.active .tracker-dot {
+  border-color: var(--primary-600);
+  color: var(--primary-600);
+  box-shadow: 0 0 0 4px var(--primary-100);
+}
+
+/* The history list: a line down the left. */
+.history {
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: none;
+  border-left: 2px solid var(--border-default);
+}
+
+/* One event. */
+.history li {
+  position: relative;
+  padding: 0 0 12px 8px;
+  font-size: 13px;
+}
+
+/* The event's dot on the line. */
+.history li::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: -20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary-600);
+}
+
+/* A "sent back" event: amber dot. */
+.history li.returned::before {
+  background: #F59E0B;
+}
+
+/* A comment. */
+.history blockquote {
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  font-size: 12px;
+}
+
+/* A "sent back" comment: amber. */
+.history li.returned blockquote {
+  border-left-color: #F59E0B;
+  background: var(--warning-bg);
+}
+
+/* Form.io forms inside a panel: no extra margin at the bottom. */
+.formio-mount .formio-form {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- Dashboards and builder */
+
+/* The dashboards page: toolbar above, dashboard below, filling the area. */
+.dashboards-page,
+.superset-builder {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 12px;
+}
+
+/* The dashboard area. */
+.dashboards-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-card);
+}
+
+/* The builder has no gap: its toolbar sits on top of Superset. */
+.superset-builder {
+  gap: 0;
+}
+
+/* The builder's toolbar. */
+.builder-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+/* One builder tab. */
+.builder-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Soft grey on hover. */
+.builder-tab:hover {
+  background: var(--bg-subtle);
+}
+
+/* The open tab: light blue. */
+.builder-tab.active {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 600;
+}
+
+/* The hint on the right of the builder toolbar. */
+.builder-hint {
+  margin-left: auto;
+  padding-right: 8px;
+}
+
+/* The full-screen button stays on the far right, even when the hint is hidden. */
+.builder-fullscreen-button {
+  margin-left: auto;
+}
+
+/* After the hint, the hint already pushed it right. */
+.builder-hint + .builder-fullscreen-button {
+  margin-left: 0;
+}
+
+/* Full screen: the builder covers the whole window, above the EMIS top bar and menu. */
+.superset-builder.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: var(--bg-surface);
+}
+
+/* The menu groups, with a little space between them. */
+.side-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Below 1100px wide: the return's side column goes under the form. */
+@media (max-width: 1100px) {
+  /* One column. */
+  .return-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------- Narrow screens */
+
+/* Below 900px wide: the menu shrinks to icons only and the spacing gets tighter. */
+@media (max-width: 900px) {
+  /* A 60px icon-only menu. */
+  .sidebar {
+    width: 60px;
+  }
+
+  /* Hide the brand text and menu labels. */
+  .brand-text,
+  .side-nav-label,
+  .side-nav-group {
+    display: none;
+  }
+
+  /* Centre the icons. */
+  .side-nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* Less padding around the page and in the top bar. */
+  .page,
+  .topbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* Hide the breadcrumbs and the sample badge to make room for the switcher. */
+  .breadcrumbs,
+  .sample-badge {
+    display: none;
+  }
+
+  /* Stack the page header. */
+  .page-header {
+    flex-direction: column;
+  }
+
+  /* Form inputs in one column. */
+  .form-grid,
+  .form-grid.three,
+  .form-grid.four {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Inputs that took several columns take the one column. */
+  .span-2,
+  .span-4 {
+    grid-column: auto;
+  }
+
+  /* The builder hint does not fit. */
+  .builder-hint {
+    display: none;
+  }
+}

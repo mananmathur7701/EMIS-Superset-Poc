@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Where and how the backend writes its log. Spring Boot reads this file at start-up.
+     Every line shows: time, level, request id, user, the class that wrote it, then the message,
+     indented by how deep it is in the call trace (endpoint → controller → service → client).
+     Three outputs:
+       1. the console (IntelliJ's Run window, or the terminal);
+       2. logs/emis-backend.log: everything, a new file each day, kept 30 days;
+       3. logs/users/<username>.log: each user's own activity (start-up lines go to system.log,
+          requests before login to anonymous.log). -->
+<configuration>
+
+    <!-- The log folder: emis.logging.dir in application.yml (LOG_DIR), "logs" by default. -->
+    <springProperty scope="context" name="LOG_DIR" source="emis.logging.dir" defaultValue="logs"/>
+
+    <!-- The line layout for files: full date, level, request id, user, class, indented message. -->
+    <property name="FILE_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [req %X{requestId:-startup}] [user %X{user:-system}] %logger{0} | %X{indent}%msg%n"/>
+
+    <!-- 1. The console: the same, with a short time and coloured levels. -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [req %X{requestId:-startup}] [user %X{user:-system}] %cyan(%logger{0}) | %X{indent}%msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 2. Everything in one file, a new file each day. -->
+    <appender name="ALL_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- Today's file. -->
+        <file>${LOG_DIR}/emis-backend.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Earlier days are renamed with their date. -->
+            <fileNamePattern>${LOG_DIR}/emis-backend.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Keep 30 days. -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 3. One file per user: the "user" value of each line picks the file. -->
+    <appender name="PER_USER_FILE" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <!-- Pick the file by the user on the line; lines without a user go to system.log. -->
+        <discriminator class="ch.qos.logback.classic.sift.MDCBasedDiscriminator">
+            <key>user</key>
+            <defaultValue>system</defaultValue>
+        </discriminator>
+        <sift>
+            <!-- The file for one user, a new file each day. -->
+            <appender name="USER-${user}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <file>${LOG_DIR}/users/${user}.log</file>
+                <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                    <!-- Earlier days are renamed with their date. -->
+                    <fileNamePattern>${LOG_DIR}/users/${user}.%d{yyyy-MM-dd}.log</fileNamePattern>
+                    <!-- Keep 30 days. -->
+                    <maxHistory>30</maxHistory>
+                </rollingPolicy>
+                <encoder>
+                    <pattern>${FILE_PATTERN}</pattern>
+                    <charset>UTF-8</charset>
+                </encoder>
+            </appender>
+        </sift>
+    </appender>
+
+    <!-- Every logger writes to all three outputs. Levels per package are set in application.yml
+         (logging.level.*): our code at DEBUG shows every step; others at INFO. -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ALL_FILE"/>
+        <appender-ref ref="PER_USER_FILE"/>
+    </root>
+</configuration>

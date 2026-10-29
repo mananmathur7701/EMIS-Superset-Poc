@@ -1,0 +1,23 @@
+{
+  "name": "emis-census-analytics",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@formio/js": "5.7.0",
+    "@superset-ui/embedded-sdk": "0.4.0",
+    "bootstrap": "5.3.8",
+    "lucide-react": "1.63.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.5"
+  }
+}

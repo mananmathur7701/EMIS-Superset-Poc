@@ -1,0 +1,163 @@
+@startuml EMIS_field_kpi_dashboard_flow
+' Sequence diagram: from a new field and KPI to a dashboard query, showing which schema is read
+' or written at each step. Paste into https://www.planttext.com (or any PlantUML viewer).
+title EMIS Census POC: from a new field and KPI to a dashboard query\n(who calls whom, and which schema is read or written)
+
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 300
+skinparam ParticipantPadding 12
+skinparam BoxPadding 8
+autonumber "<b>[00]"
+
+participant "Browser\n(EMIS React app on :3000\n+ Superset iframes)" as B
+participant "EMIS backend\n(Spring Boot on :8081)" as BE
+participant "Superset\n(:8088 and embed.localhost:8088)" as SS
+
+box "PostgreSQL: database emis_superset_app" #F4F6FA
+database "public schema\n(EMIS tables)\nlogin: postgres" as PUB
+database "analytics schema\n(census_frozen VIEW)\nread by: emis_reader" as ANA
+database "superset schema\n(Superset metadata)\nlogin: superset" as SUP
+end box
+
+== 1. Kendell (CPU analyst) adds a number field ==
+B -> BE : POST /api/admin/fields\n{code: "girls_enrolled", label: "Girls on roll", fieldType: "NUMBER"}\n(FieldLibraryPage.save, api.js adds header X-Request-Id)
+activate BE
+note right of BE : RequestLoggingFilter logs "→ POST /api/admin/fields".\nCallTraceInterceptor logs every controller/service/client call below.
+BE -> BE : AdminController.createField\nrequireAdmin: UserSession.requireUsername (session cookie)
+BE -> PUB : AccessService.findViewer:\nSELECT account + person + school_role + school
+PUB --> BE : role CPU_ANALYST, so capability MANAGE_KPIS: OK
+BE -> BE : FieldService.save, validate()\n(code a-z 0-9 _, not reserved, has a label, known type)
+BE -> PUB : INSERT INTO field (code, label, field_type = 'NUMBER', is_active)
+BE -> PUB : AnalyticsViewService.rebuildView:\nSELECT code FROM field WHERE field_type = 'NUMBER'
+PUB --> BE : girls_enrolled, total_pupils, total_teachers, trained_teachers
+BE -> ANA : one transaction:\nDROP VIEW census_frozen\nCREATE VIEW census_frozen (one column per number field, FROZEN returns only)\nGRANT SELECT ON census_frozen TO emis_reader
+note over ANA : The view stores nothing. Each time it is queried it reads\npublic.form_return, form_return_value, field and school.
+BE -> PUB : AnalyticsViewService.syncSuperset:\nSELECT code, label FROM field\n+ active KPIs (kpi, kpi_field, field) + every KPI code
+BE -> SS : SupersetClient.login:\nPOST /api/v1/security/login (admin) + GET /api/v1/security/csrf_token/
+SS -> SUP : check user admin (ab_user)
+SS --> BE : access token + CSRF token + session cookie
+BE -> SS : GET /api/v1/dataset/ (find table_name = census_frozen)
+SS -> SUP : SELECT FROM tables
+SS --> BE : dataset id 1
+BE -> SS : PUT /api/v1/dataset/1/refresh
+SS -> ANA : read the view's columns (as emis_reader)
+SS -> SUP : INSERT table_columns (girls_enrolled)
+BE -> SS : PUT /api/v1/dataset/1\n{metrics: KPI formulas, columns: friendly labels, main_dttm_col: null}
+SS -> SUP : UPDATE table_columns (verbose_name "Girls on roll")\nupdate sql_metrics (remove formulas of deleted KPIs)
+SS --> BE : 200
+BE --> B : 200 Field JSON (+ X-Request-Id)\nRequestLoggingFilter logs "←" and the call trace
+deactivate BE
+
+== 2. Kendell defines the KPI ==
+B -> BE : POST /api/admin/kpis\n{code: "KPI-ENR-02", name: "Girls share of enrolment",\nnumerator: girls_enrolled, denominator: total_pupils,\nmultiplier: 100, status: "ACTIVE", scope: empty = every school}
+activate BE
+BE -> PUB : requireAdmin (same role check as in part 1)
+BE -> BE : KpiService.save, validate()
+BE -> PUB : requireNumberField (x2):\nSELECT count(*) FROM field WHERE id = ? AND field_type = 'NUMBER'
+BE -> PUB : INSERT INTO kpi (code, name, multiplier, status, scope arrays)
+BE -> PUB : DELETE FROM kpi_field\nINSERT kpi_field (NUMERATOR), INSERT kpi_field (DENOMINATOR)
+BE -> BE : KpiService.metricExpression:\nSUM(girls_enrolled) x 100.0 / NULLIF(SUM(total_pupils), 0)
+BE -> SS : AnalyticsViewService.syncSuperset:\nlogin + CSRF, PUT /api/v1/dataset/1/refresh, GET + PUT /api/v1/dataset/1
+SS -> SUP : INSERT sql_metrics\n(metric_name "kpi_enr_02", verbose_name "Girls share of enrolment",\nexpression = the formula above)
+SS --> BE : 200
+BE --> B : 200 KpiDetail JSON
+deactivate BE
+note over B, SUP : From now on Superset's chart builder lists the column "Girls on roll"\nand the metric "Girls share of enrolment".
+
+== 3. Numbers arrive (needed before any chart shows values) ==
+B -> BE : Form builder: PUT /api/admin/forms/{id}\n(adds question girls_enrolled, links KPI-ENR-02, status PUBLISHED)
+BE -> PUB : UPDATE form (schema_json)\nDELETE + INSERT form_kpi
+B -> BE : Registrar: PUT /api/returns/form/{form}/school/{school}\n{data: {girls_enrolled: 130, ...}, submit: true}
+BE -> PUB : INSERT form_return (DRAFT, then WITH_PRINCIPAL)\nINSERT form_return_value (one row per answer)\nINSERT form_return_event (SAVED, SUBMITTED)
+B -> BE : Principal, then DEO, then CPU analyst:\nPOST /api/returns/{id}/review {action: "APPROVE"} (x3)
+BE -> PUB : UPDATE form_return SET status = next step ... FROZEN\nINSERT form_return_event (APPROVED)
+note over ANA : Nothing is written here: the FROZEN return\nappears in analytics.census_frozen at once (it is a view).
+
+== 4. Kendell builds a chart and a dashboard in Superset ==
+B -> BE : Chart builder: GET /api/analytics/builder?page=explore
+activate BE
+BE -> PUB : role check (needs BUILD)
+BE -> SS : login + GET /api/v1/dataset/ (census_frozen)
+SS -> SUP : SELECT FROM tables
+SS --> BE : dataset id 1
+BE -> BE : SsoTokenService.createToken\n(JWT HS256, valid 60 s, signed with EMIS_SSO_SECRET)
+BE --> B : {url: localhost:8088/emis/sso?token=...&next=/explore/?datasource_id=1}
+deactivate BE
+B -> SS : iframe GET /emis/sso?token=... (route added in superset_config.py)
+SS -> SS : check signature, expiry and audience "superset-sso"
+SS -> SUP : find user kstrose in ab_user\n(INSERT it the first time, role Admin; UPDATE last login)
+SS --> B : Set-Cookie (Superset session) + redirect to /explore/
+B -> SS : GET /explore/ (Explore page and its API calls)
+SS -> SUP : SELECT tables, table_columns, sql_metrics
+SS --> B : Explore: columns and KPI metrics to choose from
+B -> SS : Create chart: POST /api/v1/chart/data\n(x-axis District, metric kpi_enr_02, filter Academic year = 2026/2027)
+SS -> ANA : SELECT district_code,\nSUM(girls_enrolled) x 100.0 / NULLIF(SUM(total_pupils), 0) AS kpi_enr_02\nFROM analytics.census_frozen WHERE academic_year = '2026/2027'\nGROUP BY district_code (as emis_reader, read-only)
+ANA -> PUB : the view reads form_return (FROZEN), form_return_value, field, school
+PUB --> ANA : rows
+ANA --> SS : one row per district
+SS --> B : chart preview
+B -> SS : Save: POST /api/v1/chart/ (and "add to a new dashboard")
+SS -> SUP : INSERT slices (chart settings + query_context)\nINSERT dashboards, INSERT dashboard_slices
+B -> SS : Edit the dashboard layout: PUT /api/v1/dashboard/{id}
+SS -> SUP : UPDATE dashboards (position_json, json_metadata)
+
+== 5. Kendell publishes the dashboard to roles (EMIS: Dashboard access) ==
+B -> BE : GET /api/admin/dashboards
+activate BE
+BE -> SS : SupersetClient.listDashboards: GET /api/v1/dashboard/
+SS -> SUP : SELECT dashboards
+SS --> BE : dashboard list (id 2, title, changed)
+BE -> PUB : SELECT dashboard_id, roles FROM dashboard_publication
+BE --> B : dashboards with their roles
+deactivate BE
+B -> BE : PUT /api/admin/dashboards/2 {title, roles: [MINISTER, DEO, PRINCIPAL]}
+activate BE
+BE -> SS : SupersetClient.enableEmbedding:\nPOST /api/v1/dashboard/2/embedded {allowed_domains: [localhost:3000]}
+SS -> SUP : INSERT or UPDATE embedded_dashboards (uuid, allowed_domains)
+BE -> PUB : INSERT ... ON CONFLICT UPDATE dashboard_publication (dashboard 2, roles)
+BE --> B : 200 published
+deactivate BE
+
+== 6. Marcia (DEO of District D03) opens the dashboard ==
+B -> BE : GET /api/analytics/dashboards
+activate BE
+BE -> PUB : role check: DEO gives DASHBOARDS and row filter district_code = 'D03'
+BE -> PUB : SELECT FROM dashboard_publication WHERE roles overlap {DEO}
+BE --> B : [{dashboardId 2, title}]
+deactivate BE
+B -> BE : GET /api/analytics/auth/guest-token?dashboardId=2
+activate BE
+BE -> PUB : role check + DashboardService.requireAllowed
+BE -> SS : login + GET /api/v1/dashboard/2/embedded
+SS -> SUP : SELECT embedded_dashboards
+SS --> BE : embed uuid
+BE -> SS : login + CSRF + POST /api/v1/security/guest_token/\n{user: mfelix, resources: [dashboard uuid],\nrls: [clause "district_code = 'D03'"]}
+SS --> BE : signed guest token (valid 5 minutes, not stored anywhere)
+BE --> B : {token, dashboardId: uuid, supersetDomain: embed.localhost:8088}
+deactivate BE
+B -> SS : iframe GET embed.localhost:8088/embedded/{uuid}\n(the embedded SDK passes the token in with postMessage)
+SS -> SUP : SELECT embedded_dashboards (is localhost:3000 allowed?)\nSELECT dashboards, slices, tables
+SS --> B : dashboard layout
+loop for every chart on the dashboard
+  B -> SS : POST /api/v1/chart/data (header X-GuestToken)
+  SS -> SS : check token signature and expiry,\nthe chart belongs to this dashboard,\nthe query matches the chart's saved query_context
+  SS -> ANA : SELECT ... FROM analytics.census_frozen\nWHERE (district_code = 'D03')  (added from the guest token)\nGROUP BY ... (as emis_reader)
+  ANA -> PUB : the view reads FROZEN returns and their answers
+  PUB --> ANA : rows
+  ANA --> SS : District D03 rows only
+  SS --> B : chart data, then the chart is drawn
+end
+loop about every 5 minutes while Marcia stays logged in
+  B -> BE : GET /api/analytics/auth/guest-token?dashboardId=2 (new pass)
+  BE --> B : new token (or 401 after logout / 30 min idle: back to the login page)
+end
+note over B : Every 15 minutes, or on "Refresh now", the dashboard is embedded again\n(from the guest-token call), so newly FROZEN returns show up.
+
+legend right
+  |= Schema |= Written by |= Read by |
+  | public | EMIS backend (login postgres) | EMIS backend, and the analytics view |
+  | analytics | EMIS backend (rebuilds the view) | Superset as emis_reader (read-only) |
+  | superset | Superset (login superset) | Superset |
+endlegend
+@enduml

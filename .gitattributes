@@ -1,0 +1,13 @@
+# Keep line endings consistent whatever the computer: LF in the repository and on checkout.
+* text=auto eol=lf
+
+# Shell scripts must keep LF, or bash fails with "$'\r': command not found".
+*.sh text eol=lf
+
+# Files that are never text.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.jar binary

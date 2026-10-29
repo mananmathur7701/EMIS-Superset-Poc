@@ -1,0 +1,24 @@
+# nginx settings template. When the container starts, ${FRONTEND_PORT} and ${BACKEND_PORT} are
+# filled in from its environment (see docker-compose.yml) and the result becomes nginx's config.
+
+# One website.
+server {
+    # Listen on FRONTEND_PORT, on this machine only.
+    listen 127.0.0.1:${FRONTEND_PORT};
+    # Answer for any hostname.
+    server_name _;
+    # Serve files from the built app folder.
+    root /usr/share/nginx/html;
+
+    # Every /api URL ...
+    location /api/ {
+        # ... is forwarded to the backend, so the browser only talks to this address.
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+    }
+
+    # Every other URL ...
+    location / {
+        # ... serves the matching file, or index.html so the React app can take over.
+        try_files $uri /index.html;
+    }
+}

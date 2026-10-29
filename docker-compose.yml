@@ -1,0 +1,157 @@
+# Name of this group of containers.
+name: emis-superset-poc
+
+# Every ${VALUE:-default} below can be overridden in a .env file (see .env.example).
+#
+# There is no database container: everything uses ONE existing Postgres database
+# (EMIS_DB_NAME, default emis_superset_app) on this machine, prepared once with database/setup.sql.
+# Every container uses the host's network ("network_mode: host"), so it reaches that database at
+# 127.0.0.1 without opening Postgres to other addresses. Each service listens on 127.0.0.1 only.
+
+# Shared by the three Superset containers: our Superset image, built from ./superset.
+x-superset-image: &superset-image
+  # The image name.
+  image: emis-superset-poc/superset:6.1.0
+  # Where its Dockerfile is.
+  build: ./superset
+  # Use this machine's network, to reach the database at 127.0.0.1.
+  network_mode: host
+
+# Shared by the three Superset containers: their settings.
+x-superset-env: &superset-env
+  # Secret for Superset's cookies (it also encrypts saved database passwords, so keep it stable).
+  SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-dev-only-superset-secret-change-me-0123456789}
+  # Where Superset keeps its own tables: the EMIS database, as the superset login, whose tables
+  # go into the "superset" schema (see database/setup.sql).
+  SUPERSET_METADATA_DB_URI: postgresql+psycopg2://superset:${SUPERSET_DB_PASSWORD}@${EMIS_DB_HOST:-127.0.0.1}:${EMIS_DB_PORT:-5432}/${EMIS_DB_NAME:-emis_superset_app}
+  # Secret for signing guest tokens.
+  SUPERSET_GUEST_TOKEN_SECRET: ${SUPERSET_GUEST_TOKEN_SECRET:-dev-only-guest-token-secret-change-me}
+  # Secret shared with the backend for the CPU analyst's automatic sign-in to the builder.
+  EMIS_SSO_SECRET: ${EMIS_SSO_SECRET:-dev-only-sso-secret-change-me-0123456789}
+  # Superset admin username.
+  SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+  # Superset admin password.
+  SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+  # Superset admin email.
+  SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-admin@emis.local}
+  # Frontend addresses allowed to show Superset in an iframe: the Docker frontend, and the
+  # development server (npm run dev), which always runs on port 3000.
+  EMBED_HOST_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://localhost:3000
+  # The port Superset's web server listens on ...
+  SUPERSET_PORT: ${SUPERSET_PORT:-8088}
+  # ... on this machine only.
+  SUPERSET_BIND_ADDRESS: 127.0.0.1
+
+services:
+  # The Java Spring Boot backend.
+  backend:
+    # Built from ./backend.
+    build: ./backend
+    # Use this machine's network, to reach the database at 127.0.0.1.
+    network_mode: host
+    # Its settings (read by application.yml). The database login and password are application.yml's
+    # defaults (the same as when you run the backend yourself); set DB_USERNAME / DB_PASSWORD here
+    # to use another login.
+    environment:
+      # Listen on BACKEND_PORT ...
+      SERVER_PORT: ${BACKEND_PORT:-8080}
+      # ... on this machine only.
+      SERVER_ADDRESS: 127.0.0.1
+      # Address of the EMIS database.
+      DB_URL: jdbc:postgresql://${EMIS_DB_HOST:-127.0.0.1}:${EMIS_DB_PORT:-5432}/${EMIS_DB_NAME:-emis_superset_app}
+      # Address the backend uses to call Superset.
+      SUPERSET_BASE_URL: http://127.0.0.1:${SUPERSET_PORT:-8088}
+      # Address the browser uses for the builder iframe.
+      SUPERSET_PUBLIC_URL: http://localhost:${SUPERSET_PORT:-8088}
+      # Address the browser uses for the embedded dashboard. Same Superset, different hostname:
+      # otherwise the embedded page would log the analyst out of the builder.
+      SUPERSET_EMBED_URL: http://embed.localhost:${SUPERSET_PORT:-8088}
+      # Superset login the backend uses.
+      SUPERSET_USERNAME: ${SUPERSET_ADMIN_USERNAME:-admin}
+      # Its password.
+      SUPERSET_PASSWORD: ${SUPERSET_ADMIN_PASSWORD:-admin}
+      # Log users out after this long without activity.
+      SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-30m}
+      # Show the demo "switch account" dropdown after login.
+      DEMO_SWITCH_ENABLED: ${DEMO_SWITCH_ENABLED:-true}
+      # Frontend addresses allowed to call the backend directly from the browser.
+      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://localhost:3000
+      # Frontend addresses allowed to embed the dashboards the CPU analyst publishes.
+      EMBED_HOST_ORIGINS: http://localhost:${FRONTEND_PORT:-3000},http://localhost:3000
+      # Secret shared with Superset for the CPU analyst's automatic sign-in to the builder.
+      EMIS_SSO_SECRET: ${EMIS_SSO_SECRET:-dev-only-sso-secret-change-me-0123456789}
+    # Ready once Spring Boot reports UP ($$ makes the container, not Compose, read SERVER_PORT).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$$SERVER_PORT/actuator/health/readiness | grep -q UP"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  # One-off job: prepares Superset's tables and admin user, then exits.
+  superset-init:
+    # Our Superset image (host network).
+    <<: *superset-image
+    # Run the init script.
+    command: ["/app/emis/init.sh"]
+    # Superset settings.
+    environment:
+      <<: *superset-env
+
+  # The Superset web server.
+  superset:
+    # Our Superset image (host network).
+    <<: *superset-image
+    # Superset settings.
+    environment:
+      <<: *superset-env
+    # Start after the init job has finished.
+    depends_on:
+      superset-init:
+        condition: service_completed_successfully
+    # Ready once Superset's health page answers.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:$$SUPERSET_PORT/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 20s
+
+  # One-off job: creates the dataset, KPI metrics, charts and dashboard, then exits.
+  superset-provision:
+    # Our Superset image (host network).
+    <<: *superset-image
+    # Run the provisioning script.
+    command: ["python", "/app/emis/provision.py"]
+    # Superset settings plus a few extra ones.
+    environment:
+      <<: *superset-env
+      # Address of Superset.
+      SUPERSET_URL: http://127.0.0.1:${SUPERSET_PORT:-8088}
+      # Address of the backend (for the KPI list).
+      BACKEND_URL: http://127.0.0.1:${BACKEND_PORT:-8080}
+      # How Superset reads the EMIS data (read-only login).
+      EMIS_READER_URI: postgresql+psycopg2://emis_reader:${EMIS_READER_PASSWORD}@${EMIS_DB_HOST:-127.0.0.1}:${EMIS_DB_PORT:-5432}/${EMIS_DB_NAME:-emis_superset_app}
+    # Start after Superset and the backend are ready.
+    depends_on:
+      superset:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  # The React frontend, served by nginx, which also forwards /api to the backend.
+  frontend:
+    # Built from ./frontend.
+    build: ./frontend
+    # Use this machine's network, to reach the backend at 127.0.0.1.
+    network_mode: host
+    # Ports nginx uses (filled into nginx.conf when the container starts).
+    environment:
+      # Serve the app on FRONTEND_PORT.
+      FRONTEND_PORT: ${FRONTEND_PORT:-3000}
+      # Forward /api to the backend on BACKEND_PORT.
+      BACKEND_PORT: ${BACKEND_PORT:-8080}
+    # Start after the backend is ready.
+    depends_on:
+      backend:
+        condition: service_healthy
